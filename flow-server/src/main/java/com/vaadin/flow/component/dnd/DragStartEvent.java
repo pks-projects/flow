@@ -17,6 +17,10 @@ package com.vaadin.flow.component.dnd;
 
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.ComponentEvent;
+import com.vaadin.flow.component.DomEvent;
+import com.vaadin.flow.component.EventData;
+
+import elemental.json.JsonObject;
 
 /**
  * HTML5 drag start event.
@@ -24,33 +28,21 @@ import com.vaadin.flow.component.ComponentEvent;
  * @param <T>
  *            Type of the component that is dragged.
  * @author Vaadin Ltd
- * @see DragSourceExtension#addDragStartListener(DragStartListener)
+ * @see DragSourceComponent#addDragStartListener(DragStartListener)
  */
 public class DragStartEvent<T extends Component> extends ComponentEvent<T> {
-    private final EffectAllowed effectAllowed;
+
+    private final DragSource<T> dragSource;
 
     /**
      * Creates a drag start event.
      *
      * @param source
      *            Component that is dragged.
-     * @param effectAllowed
-     *            Allowed effects from {@code DataTransfer.effectAllowed}
-     *            object.
      */
-    public DragStartEvent(T source, EffectAllowed effectAllowed) {
+    public DragStartEvent(DragSource<T> dragSource, T source) {
         super(source, true);
-
-        this.effectAllowed = effectAllowed;
-    }
-
-    /**
-     * Returns the {@code effectAllowed} parameter of this event.
-     *
-     * @return This event's {@code effectAllowed} parameter.
-     */
-    public EffectAllowed getEffectAllowed() {
-        return effectAllowed;
+        this.dragSource = dragSource;
     }
 
     /**
@@ -60,5 +52,14 @@ public class DragStartEvent<T extends Component> extends ComponentEvent<T> {
      */
     public T getComponent() {
         return getSource();
+    }
+
+    /**
+     * Returns the drag source where the drag start event occurred.
+     * 
+     * @return the drag source
+     */
+    public DragSource<T> getDragSource() {
+        return dragSource;
     }
 }

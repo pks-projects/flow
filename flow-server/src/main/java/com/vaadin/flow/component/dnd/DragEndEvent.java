@@ -24,22 +24,26 @@ import com.vaadin.flow.component.ComponentEvent;
  * @param <T>
  *            Type of the component that was dragged.
  * @author Vaadin Ltd
- * @see DragSourceExtension#addDragEndListener(DragEndListener)
+ * @see DragSourceComponent#addDragEndListener(DragEndListener)
  */
 public class DragEndEvent<T extends Component> extends ComponentEvent<T> {
     private final DropEffect dropEffect;
+    private final DragSource<T> dragSource;
 
     /**
      * Creates a drag end event.
      *
+     * @param dragSource
+     *            the drag source
      * @param source
      *            Component that was dragged.
      * @param dropEffect
      *            Drop effect from {@code DataTransfer.dropEffect} object.
      */
-    public DragEndEvent(T source, DropEffect dropEffect) {
+    public DragEndEvent(DragSource<T> dragSource, T source,
+            DropEffect dropEffect) {
         super(source, true);
-
+        this.dragSource = dragSource;
         this.dropEffect = dropEffect;
     }
 
@@ -57,10 +61,9 @@ public class DragEndEvent<T extends Component> extends ComponentEvent<T> {
      *
      * @return The {@code DataTransfer.dropEffect} parameter of the client side
      *         dragend event.
-     * @see DragSourceExtension#setEffectAllowed(com.vaadin.shared.ui.dnd.EffectAllowed)
-     *      DragSourceExtension#setEffectAllowed(EffectAllowed)
-     * @see DropTargetExtension#setDropEffect(DropEffect)
-     * @see DropTargetExtension#setDropCriteriaScript(String)
+     * @see DragSourceComponent#setEffectAllowed(com.vaadin.flow.component.dnd.EffectAllowed)
+     * @see DropTargetComponent#setDropEffect(DropEffect)
+     * @see DropTargetComponent#setDropCriteriaScript(String)
      */
     public DropEffect getDropEffect() {
         return dropEffect;
@@ -84,5 +87,14 @@ public class DragEndEvent<T extends Component> extends ComponentEvent<T> {
      */
     public T getComponent() {
         return getSource();
+    }
+
+    /**
+     * Returns the drag source where the dragend event occurred.
+     *
+     * @return the drag source
+     */
+    public DragSource<T> getDragSource() {
+        return dragSource;
     }
 }

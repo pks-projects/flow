@@ -29,7 +29,7 @@ import com.vaadin.flow.shared.Registration;
  * @author Vaadin Ltd
  *
  */
-public class DropTargetComponent<T extends Component> extends Composite<T> {
+public class DropTargetComponent<T extends Component> extends Composite<T> implements DropTarget<T> {
 
     private final T origin;
 
@@ -45,77 +45,9 @@ public class DropTargetComponent<T extends Component> extends Composite<T> {
         origin = component;
     }
 
-    /**
-     * Invoked when a <code>drop</code> has been received from client side.
-     * Fires the {@link DropEvent}.
-     *
-     * @param types
-     *            List of data types from {@code DataTransfer.types} object.
-     * @param data
-     *            Map containing all types and corresponding data from the
-     *            {@code
-     *         DataTransfer} object.
-     * @param dropEffect
-     *            the drop effect
-     * @param mouseEventDetails
-     *            mouse event details object containing information about the
-     *            drop event
-     */
-    protected void onDrop(List<String> types, Map<String, String> data,
-            DropEffect dropEffect, MouseEventDetails mouseEventDetails) {
-
-        // Create a linked map that preserves the order of types
-        Map<String, String> dataPreserveOrder = new LinkedHashMap<>();
-        types.forEach(type -> dataPreserveOrder.put(type, data.get(type)));
-
-        DropEvent<T> event = new DropEvent<>(getContent(), dataPreserveOrder,
-                dropEffect,
-                null /* it should be active drag source, see below */,
-                mouseEventDetails);
-        /*
-         * DropEvent<T> event = new DropEvent<>(getContent(), dataPreserveOrder,
-         * dropEffect, getUI().getActiveDragSource(), mouseEventDetails);
-         */
-
-        fireEvent(event);
-    }
-
-    /**
-     * Sets the drop effect for the current drop target. This is set to the
-     * dropEffect on {@code dragenter} and {@code dragover} events.
-     * <p>
-     * <em>NOTE: If the drop effect that doesn't match the dropEffect /
-     * effectAllowed of the drag source, it DOES NOT prevent drop on IE and
-     * Safari! For FireFox and Chrome the drop is prevented if there they don't
-     * match.</em>
-     * <p>
-     * Default value is browser dependent and can depend on e.g. modifier keys.
-     * <p>
-     * From Moz Foundation: "You can modify the dropEffect property during the
-     * dragenter or dragover events, if for example, a particular drop target
-     * only supports certain operations. You can modify the dropEffect property
-     * to override the user effect, and enforce a specific drop operation to
-     * occur. Note that this effect must be one listed within the effectAllowed
-     * property. Otherwise, it will be set to an alternate value that is
-     * allowed."
-     *
-     * @param dropEffect
-     *            the drop effect to be set or {@code null} to not modify
-     */
-    public void setDropEffect(DropEffect dropEffect) {
-        if (!Objects.equals(this.dropEffect, dropEffect)) {
-            this.dropEffect = dropEffect;
-        }
-    }
-
-    /**
-     * Returns the drop effect for the current drop target.
-     *
-     * @return The drop effect of this drop target or {@code null} if none set
-     * @see #setDropEffect(DropEffect)
-     */
-    public DropEffect getDropEffect() {
-        return dropEffect;
+    @Override
+    public T getDropTargetComponent() {
+        return getContent();
     }
 
     /**
@@ -274,19 +206,6 @@ public class DropTargetComponent<T extends Component> extends Composite<T> {
     public void setDropCriteria(Criterion.Match match, Criterion... criteria) {
         criteriaMatch = match;
         this.criteria = Arrays.asList(criteria);
-    }
-
-    /**
-     * Attaches drop listener for the current drop target.
-     * {@link DropListener#drop(DropEvent)} is called when drop event happens on
-     * the client side.
-     *
-     * @param listener
-     *            Listener to handle drop event.
-     * @return Handle to be used to remove this listener.
-     */
-    public Registration addDropListener(DropListener<T> listener) {
-        return addListener(DropEvent.class, (DropListener) listener);
     }
 
     @Override

@@ -23,6 +23,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.Future;
 
+import com.vaadin.flow.component.dnd.DragSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -109,6 +110,8 @@ public class UI extends Component
     private final UIInternals internals = new UIInternals(this);
 
     private final Page page = new Page(this);
+
+    private DragSource<? extends Component> activeDragSource;
 
     /**
      * Creates a new empty UI.
@@ -1039,4 +1042,28 @@ public class UI extends Component
     public ShortcutRegistration registerShortcut(Command command, Key key) {
         return Shortcuts.registerShortcut(this, this, command, key);
     }
-}
+
+    /**
+     * Sets the drag source of an active HTML5 drag event.
+     *
+     * @param activeDragSource
+     *            the drag source component
+     * @see DragSource
+     * @since
+     */
+    public void setActiveDragSource(
+            DragSource<? extends Component> activeDragSource) {
+        this.activeDragSource = activeDragSource;
+    }
+
+    /**
+     * Gets the drag source of an active HTML5 drag event.
+     *
+     * @return Extension of the drag source component if the drag event is
+     *         active and originated from this UI, {@literal null} otherwise.
+     * @see DragSource
+     * @since
+     */
+    public DragSource<? extends Component> getActiveDragSource() {
+        return activeDragSource;
+    }}

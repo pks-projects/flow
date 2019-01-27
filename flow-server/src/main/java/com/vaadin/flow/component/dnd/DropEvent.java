@@ -15,6 +15,7 @@
  */
 package com.vaadin.flow.component.dnd;
 
+import javax.management.ObjectName;
 import java.util.Map;
 import java.util.Optional;
 
@@ -27,14 +28,13 @@ import com.vaadin.flow.component.ComponentEvent;
  * @param <T>
  *            Type of the drop target component.
  * @author Vaadin Ltd
- * @see DropTargetExtension#addDropListener(DropListener)
+ * @see DropTarget#addDropListener(DropListener)
  */
 public class DropEvent<T extends Component> extends ComponentEvent<T> {
     private final Map<String, String> data;
-    private final DragSourceComponent<? extends Component> dragSourceExtension;
-    private final Component dragSource;
+    private final DragSource<?> dragSource;
+    private final Component dragSourceComponent;
     private final DropEffect dropEffect;
-    private final MouseEventDetails mouseEventDetails;
 
     /**
      * Creates a server side drop event.
@@ -47,24 +47,19 @@ public class DropEvent<T extends Component> extends ComponentEvent<T> {
      *         DataTransfer} object.
      * @param dropEffect
      *            the desired drop effect
-     * @param dragSourceExtension
+     * @param dragSource
      *            Drag source extension of the component that initiated the drop
-     *            event.
-     * @param mouseEventDetails
-     *            Mouse event details object containing information about the
-     *            drop event
+     *            event.-
      */
     public DropEvent(T target, Map<String, String> data, DropEffect dropEffect,
-            DragSourceComponent<? extends Component> dragSourceExtension,
-            MouseEventDetails mouseEventDetails) {
+            DragSource<? extends Component> dragSource) {
         super(target, true);
 
         this.data = data;
         this.dropEffect = dropEffect;
-        this.dragSourceExtension = dragSourceExtension;
-        this.dragSource = Optional.ofNullable(dragSourceExtension)
-                .map(DragSourceComponent::getContent).orElse(null);
-        this.mouseEventDetails = mouseEventDetails;
+        this.dragSource = dragSource;
+        this.dragSourceComponent = Optional.ofNullable(dragSource)
+                .map(DragSource::getDragSourceComponent).orElse(null);
     }
 
     /**
@@ -139,7 +134,7 @@ public class DropEvent<T extends Component> extends ComponentEvent<T> {
      * @return Drag source component or an empty optional.
      */
     public Optional<Component> getDragSourceComponent() {
-        return Optional.ofNullable(dragSource);
+        return Optional.ofNullable(dragSourceComponent);
     }
 
     /**
@@ -149,8 +144,8 @@ public class DropEvent<T extends Component> extends ComponentEvent<T> {
      *
      * @return Drag source extension or an empty optional
      */
-    public Optional<DragSourceComponent<? extends Component>> getDragSourceExtension() {
-        return Optional.ofNullable(dragSourceExtension);
+    public Optional<DragSource<? extends Component>> getDragSource() {
+        return Optional.ofNullable(dragSource);
     }
 
     /**
@@ -163,17 +158,7 @@ public class DropEvent<T extends Component> extends ComponentEvent<T> {
      * @see DragSourceExtension#setDragData(Object)
      */
     public Optional<Object> getDragData() {
-        return getDragSourceExtension().map(DragSourceComponent::getDragData);
-    }
-
-    /**
-     * Gets the mouse event details for the drop event.
-     *
-     * @return Mouse event details object containing information about the drop
-     *         event.
-     */
-    public MouseEventDetails getMouseEventDetails() {
-        return mouseEventDetails;
+        return getDragSource().map(DragSource::getDragData);
     }
 
     /**

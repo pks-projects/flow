@@ -21,24 +21,23 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
+import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.ComponentEventListener;
 import com.vaadin.flow.component.Composite;
 import com.vaadin.flow.component.DetachEvent;
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.shared.Registration;
 
 /**
  * @author Vaadin Ltd
- *
  */
-public class DragSourceComponent<T extends Component> extends Composite<T> {
+public class DragSourceComponent<T extends Component> extends Composite<T> implements DragSource<T> {
 
     private final T origin;
 
     private Registration dragStartListenerHandle;
     private Registration dragEndListenerHandle;
-
-    private EffectAllowed effectAllowed;
 
     private final Map<String, String> transferData = new LinkedHashMap<>();
 
@@ -52,76 +51,12 @@ public class DragSourceComponent<T extends Component> extends Composite<T> {
 
     public DragSourceComponent(T component) {
         origin = component;
+        setDraggable(true);
     }
 
     @Override
-    protected void onDetach(DetachEvent detachEvent) {
-        // XXX: do it better in a detach listener
-        dragStartListenerHandle.remove();
-        dragEndListenerHandle.remove();
-    }
-
-    /**
-     * Method invoked when a <code>dragstart</code> has been sent from client
-     * side. Fires the {@link DragStartEvent}.
-     */
-    protected void onDragStart() {
-        DragStartEvent<T> event = new DragStartEvent<>(getContent(),
-                effectAllowed);
-        fireEvent(event);
-    }
-
-    /**
-     * Method invoked when a <code>dragend</code> has been sent from client
-     * side. Fires the {@link DragEndEvent}.
-     *
-     * @param dropEffect
-     *            the drop effect on the dragend
-     */
-    protected void onDragEnd(DropEffect dropEffect) {
-        DragEndEvent<T> event = new DragEndEvent<>(getContent(), dropEffect);
-        fireEvent(event);
-    }
-
-    /**
-     * Sets the allowed effects for the current drag source element. Used for
-     * setting client side {@code DataTransfer.effectAllowed} parameter for the
-     * drag event.
-     * <p>
-     * By default the value is {@link EffectAllowed#UNINITIALIZED} which is
-     * equivalent to {@link EffectAllowed#ALL}.
-     *
-     * @param effect
-     *            Effects to allow for this draggable element. Cannot be {@code
-     *         null}.
-     */
-    public void setEffectAllowed(EffectAllowed effect) {
-        if (effect == null) {
-            throw new IllegalArgumentException("Allowed effect cannot be null");
-        }
-        if (!Objects.equals(effectAllowed, effect)) {
-            effectAllowed = effect;
-        }
-    }
-
-    /**
-     * Returns the allowed effects for the current drag source element. Used to
-     * set client side {@code DataTransfer.effectAllowed} parameter for the drag
-     * event.
-     * <p>
-     * You can use different types of data to support dragging to different
-     * targets. Accepted types depend on the drop target and those can be
-     * platform specific. See
-     * https://developer.mozilla.org/en-US/docs/Web/API/HTML_Drag_and_Drop_API/Recommended_drag_types
-     * for examples on different types.
-     * <p>
-     * <em>NOTE: IE11 only supports type ' text', which can be set using
-     * {@link #setDataTransferText(String data)}</em>
-     *
-     * @return Effects that are allowed for this draggable element.
-     */
-    public EffectAllowed getEffectAllowed() {
-        return effectAllowed;
+    public T getDragSourceComponent() {
+        return getContent();
     }
 
     /**
@@ -133,12 +68,10 @@ public class DragSourceComponent<T extends Component> extends Composite<T> {
      * Use {@link #setDataTransferText(String)} method instead if your
      * application supports IE11.
      *
-     * @param type
-     *            Type of the data to be set for the client side draggable
-     *            element, e.g. {@code text/plain}. Cannot be {@code null}.
-     * @param data
-     *            Data to be set for the client side draggable element. Cannot
-     *            be {@code null}.
+     * @param type Type of the data to be set for the client side draggable
+     *             element, e.g. {@code text/plain}. Cannot be {@code null}.
+     * @param data Data to be set for the client side draggable element. Cannot
+     *             be {@code null}.
      */
     public void setDataTransferData(String type, String data) {
         if (type == null) {
@@ -156,8 +89,7 @@ public class DragSourceComponent<T extends Component> extends Composite<T> {
      * Returns the data stored with type {@code type} in this drag source
      * element.
      *
-     * @param type
-     *            Type of the requested data, e.g. {@code text/plain}.
+     * @param type Type of the requested data, e.g. {@code text/plain}.
      * @return Data of type {@code type} stored in this drag source element.
      */
     public String getDataTransferData(String type) {
@@ -169,7 +101,7 @@ public class DragSourceComponent<T extends Component> extends Composite<T> {
      * map preserves the order of storage and is unmodifiable.
      *
      * @return Unmodifiable copy of the map of data in the order the data was
-     *         stored.
+     * stored.
      */
     public Map<String, String> getDataTransferData() {
         return Collections.unmodifiableMap(transferData);
@@ -183,8 +115,7 @@ public class DragSourceComponent<T extends Component> extends Composite<T> {
      * Note that {@code "text"} is the only cross browser supported data type.
      * Use this method if your application supports IE11.
      *
-     * @param data
-     *            Data to be set for the client side draggable element.
+     * @param data Data to be set for the client side draggable element.
      * @see #setDataTransferData(String, String)
      */
     public void setDataTransferText(String data) {
@@ -205,8 +136,7 @@ public class DragSourceComponent<T extends Component> extends Composite<T> {
      * Clears data with the given type for this drag source element when
      * present.
      *
-     * @param type
-     *            Type of data to be cleared. Cannot be {@code null}.
+     * @param type Type of data to be cleared. Cannot be {@code null}.
      */
     public void clearDataTransferData(String type) {
         if (type == null) {
@@ -233,11 +163,9 @@ public class DragSourceComponent<T extends Component> extends Composite<T> {
      * Note that setting payload in Internet Explorer 11 is not possible due to
      * the browser's limitations.
      *
-     * @param key
-     *            key of the payload to be transferred
-     * @param value
-     *            value of the payload to be transferred
-     * @see DropTargetExtension#setDropCriterion(String, String)
+     * @param key   key of the payload to be transferred
+     * @param value value of the payload to be transferred
+     * @see DropTargetComponent#setDropCriterion(String, String)
      */
     public void setPayload(String key, String value) {
         setPayload(key, String.valueOf(value), Payload.ValueType.STRING);
@@ -253,14 +181,12 @@ public class DragSourceComponent<T extends Component> extends Composite<T> {
      * Note that setting payload in Internet Explorer 11 is not possible due to
      * the browser's limitations.
      *
-     * @param key
-     *            key of the payload to be transferred
-     * @param value
-     *            value of the payload to be transferred
-     * @see DropTargetExtension#setDropCriterion(String,
-     *      com.vaadin.shared.ui.dnd.criteria.ComparisonOperator, int)
-     *      DropTargetExtension#setDropCriterion(String, ComparisonOperator,
-     *      int)
+     * @param key   key of the payload to be transferred
+     * @param value value of the payload to be transferred
+     * @see DropTargetComponent#setDropCriterion(String,
+     * com.vaadin.flow.component.dnd.ComparisonOperator, int)
+     * DropTargetComponent#setDropCriterion(String, ComparisonOperator,
+     * int)
      */
     public void setPayload(String key, int value) {
         setPayload(key, String.valueOf(value), Payload.ValueType.INTEGER);
@@ -276,84 +202,30 @@ public class DragSourceComponent<T extends Component> extends Composite<T> {
      * Note that setting payload in Internet Explorer 11 is not possible due to
      * the browser's limitations.
      *
-     * @param key
-     *            key of the payload to be transferred
-     * @param value
-     *            value of the payload to be transferred
-     * @see DropTargetExtension#setDropCriterion(String,
-     *      com.vaadin.shared.ui.dnd.criteria.ComparisonOperator, double)
-     *      DropTargetExtension#setDropCriterion(String, ComparisonOperator,
-     *      double)
+     * @param key   key of the payload to be transferred
+     * @param value value of the payload to be transferred
+     * @see DropTargetComponent#setDropCriterion(String,
+     * com.vaadin.flow.component.dnd.ComparisonOperator, double)
+     * DropTargetComponent#setDropCriterion(String, ComparisonOperator,
+     * double)
      */
     public void setPayload(String key, double value) {
         setPayload(key, String.valueOf(value), Payload.ValueType.DOUBLE);
     }
 
     private void setPayload(String key, String value,
-            Payload.ValueType valueType) {
+                            Payload.ValueType valueType) {
         payloads.put(key, new Payload(key, value, valueType));
     }
 
     /**
-     * Set server side drag data. This data is available in the drop event and
-     * can be used to transfer data between drag source and drop target if they
-     * are in the same UI.
-     *
-     * @param data
-     *            Data to transfer to drop event.
-     */
-    public void setDragData(Object data) {
-        dragData = data;
-    }
-
-    /**
-     * Get server side drag data. This data is available in the drop event and
-     * can be used to transfer data between drag source and drop target if they
-     * are in the same UI.
-     *
-     * @return Server side drag data if set, otherwise {@literal null}.
-     */
-    public Object getDragData() {
-        return dragData;
-    }
-
-    /**
-     * Attaches dragstart listener for the current drag source.
-     * {@link DragStartListener#dragStart(DragStartEvent)} is called when
-     * dragstart event happens on the client side.
-     *
-     * @param listener
-     *            Listener to handle dragstart event.
-     * @return Handle to be used to remove this listener.
-     */
-    public Registration addDragStartListener(DragStartListener<T> listener) {
-        return addListener(DragStartEvent.class,
-                (ComponentEventListener) listener);
-    }
-
-    /**
-     * Attaches dragend listener for the current drag source.
-     * {@link DragEndListener#dragEnd(DragEndEvent)} is called when dragend
-     * event happens on the client side.
-     *
-     * @param listener
-     *            Listener to handle dragend event.
-     * @return Handle to be used to remove this listener.
-     */
-    public Registration addDragEndListener(DragEndListener<T> listener) {
-        return addListener(DragEndEvent.class,
-                (ComponentEventListener) listener);
-    }
-
-    /**
      * Set a custom drag image for the current drag source.
-     *
-     * XXX : what type should be {@code imageResource} ? In FW8 it's a
+     * <p>
+     * TODO : what type should be {@code imageResource} ? In FW8 it's a
      * {@code Resource} which doesn't exist in Flow. MAy be it should be just a
      * {@code String} ?
      *
-     * @param imageResource
-     *            Resource of the image to be displayed as drag image.
+     * @param imageResource Resource of the image to be displayed as drag image.
      */
     public void setDragImage(Component imageResource) {
     }
@@ -363,21 +235,4 @@ public class DragSourceComponent<T extends Component> extends Composite<T> {
         return origin;
     }
 
-    /**
-     * Initializes dragstart and -end event listeners for this drag source to
-     * capture the active drag source for the UI.
-     */
-    private void initListeners() {
-        // XXX: Do we need this at all?
-        // Set current extension as active drag source in the UI
-        /*
-         * dragStartListenerHandle = addDragStartListener( event ->
-         * getUI().setActiveDragSource(this));
-         */
-        // Remove current extension as active drag source from the UI
-        /*
-         * dragEndListenerHandle = addDragEndListener( event ->
-         * getUI().setActiveDragSource(null));
-         */
-    }
 }
