@@ -3,6 +3,7 @@
 <head>
   <script type="text/javascript" src="./frontend/bower_components/webcomponentsjs/webcomponents-loader.js"></script>
   <link rel="import" href="web-component/client-select.html">
+  <link rel="import" href="web-component/my-secure.html">
 </head>
 
 <body>
@@ -15,5 +16,9 @@
   <div>
     <client-select id="no-message">No message</client-select>
   </div>
+
+  <my-secure id="unsecured"></my-secure>
+
+  <my-secure auth="secret" id="secured"></my-secure>
 
 </body>

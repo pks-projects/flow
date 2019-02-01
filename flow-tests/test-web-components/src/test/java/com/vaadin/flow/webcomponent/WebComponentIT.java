@@ -55,4 +55,18 @@ public class WebComponentIT extends ChromeBrowserTest {
         Assert.assertFalse("Message should not be visible",
                 noMessage.findElement(By.cssSelector("span")).isDisplayed());
     }
+
+    @Test
+    public void securedWebComponent_securesCorrectly() {
+        open();
+
+        waitForElementVisible(By.id("show-message"));
+
+        WebElement unsecured = findElement(By.id("unsecured"));
+        Assert.assertEquals("not initialized", unsecured.getText());
+
+        WebElement secured = findElement(By.id("secured"));
+        Assert.assertEquals("Initializing secure", secured.getText());
+
+    }
 }
