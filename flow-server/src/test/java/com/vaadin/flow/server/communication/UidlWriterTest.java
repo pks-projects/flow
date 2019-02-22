@@ -195,8 +195,8 @@ public class UidlWriterTest {
         List<JavaScriptInvocation> executeJavaScriptList = Arrays
                 .asList(invocation1, invocation2);
 
-        JsonArray json = UidlWriter
-                .encodeExecuteJavaScriptList(executeJavaScriptList);
+        JsonArray json = UidlWriter.encodeExecuteJavaScriptList(null,
+                executeJavaScriptList);
 
         JsonArray expectedJson = JsonUtils.createArray(JsonUtils.createArray(
                 // Null since element is not attached

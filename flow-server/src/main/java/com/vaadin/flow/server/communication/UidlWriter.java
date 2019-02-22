@@ -42,12 +42,16 @@ import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.internal.DependencyList;
 import com.vaadin.flow.component.internal.UIInternals;
 import com.vaadin.flow.component.internal.UIInternals.JavaScriptInvocation;
+import com.vaadin.flow.function.SerializableConsumer;
 import com.vaadin.flow.internal.JsonCodec;
 import com.vaadin.flow.internal.JsonUtils;
+import com.vaadin.flow.internal.StateNode;
 import com.vaadin.flow.internal.StateTree;
 import com.vaadin.flow.internal.change.NodeAttachChange;
 import com.vaadin.flow.internal.change.NodeChange;
 import com.vaadin.flow.internal.nodefeature.ComponentMapping;
+import com.vaadin.flow.internal.nodefeature.ReturnChannelMap;
+import com.vaadin.flow.internal.nodefeature.ReturnChannelRegistration;
 import com.vaadin.flow.server.DependencyFilter;
 import com.vaadin.flow.server.DependencyFilter.FilterContext;
 import com.vaadin.flow.server.SystemMessages;
@@ -156,8 +160,7 @@ public class UidlWriter implements Serializable {
         getLogger().debug("* Creating response to client");
 
         int syncId = service.getDeploymentConfiguration().isSyncIdCheckEnabled()
-                ? uiInternals.getServerSyncId()
-                : -1;
+                ? uiInternals.getServerSyncId() : -1;
 
         response.put(ApplicationConstants.SERVER_SYNC_ID, syncId);
         int nextClientToServerMessageId = uiInternals
@@ -193,7 +196,7 @@ public class UidlWriter implements Serializable {
                 .dumpPendingJavaScriptInvocations();
         if (!executeJavaScriptList.isEmpty()) {
             response.put(JsonConstants.UIDL_KEY_EXECUTE,
-                    encodeExecuteJavaScriptList(executeJavaScriptList));
+                    encodeExecuteJavaScriptList(ui, executeJavaScriptList));
         }
         if (ui.getSession().getService().getDeploymentConfiguration()
                 .isRequestTiming()) {
@@ -268,10 +271,12 @@ public class UidlWriter implements Serializable {
 
         if (stream == null) {
             String resolvedPath = service.resolveResource(url, browser);
-            getLogger().warn("The path '{}' for inline resource "
-                    + "has been resolved to '{}'. "
-                    + "But resource is not available via the servlet context. "
-                    + "Trying to load '{}' as a URL", url, resolvedPath, url);
+            getLogger().warn(
+                    "The path '{}' for inline resource "
+                            + "has been resolved to '{}'. "
+                            + "But resource is not available via the servlet context. "
+                            + "Trying to load '{}' as a URL",
+                    url, resolvedPath, url);
             try {
                 stream = new URL(url).openConnection().getInputStream();
             } catch (MalformedURLException exception) {
@@ -295,23 +300,78 @@ public class UidlWriter implements Serializable {
     }
 
     // non-private for testing purposes
-    static JsonArray encodeExecuteJavaScriptList(
+    static JsonArray encodeExecuteJavaScriptList(UI ui,
             List<JavaScriptInvocation> executeJavaScriptList) {
         return executeJavaScriptList.stream()
-                .map(UidlWriter::encodeExecuteJavaScript)
+                .map(invocation -> encodeExecuteJavaScript(ui, invocation))
                 .collect(JsonUtils.asArray());
     }
 
-    private static JsonArray encodeExecuteJavaScript(
-            JavaScriptInvocation executeJavaScript) {
-        Stream<JsonValue> parametersStream = executeJavaScript.getParameters()
-                .stream().map(JsonCodec::encodeWithTypeInfo);
+    private static ReturnChannelRegistration createReturnValueChannel(
+            StateNode owner, List<ReturnChannelRegistration> registrations,
+            SerializableConsumer<JsonValue> action) {
+        ReturnChannelRegistration channel = owner
+                .getFeature(ReturnChannelMap.class)
+                .registerChannel(arguments -> {
+                    registrations.forEach(ReturnChannelRegistration::remove);
+
+                    action.accept(arguments.get(0));
+                });
+
+        registrations.add(channel);
+
+        return channel;
+    }
+
+    private static JsonArray encodeExecuteJavaScript(UI ui,
+            JavaScriptInvocation invocation) {
+        List<Object> parametersList = invocation.getParameters();
+
+        Stream<Object> parameters = parametersList.stream();
+        String expression = invocation.getExpression();
+
+        if (invocation.isSubscribed()) {
+            StateNode owner = invocation.getOwner();
+            if (owner == null) {
+                owner = ui.getElement().getNode();
+            }
+
+            List<ReturnChannelRegistration> channels = new ArrayList<>();
+
+            ReturnChannelRegistration successChannel = createReturnValueChannel(
+                    owner, channels, invocation::complete);
+            ReturnChannelRegistration errorChannel = createReturnValueChannel(
+                    owner, channels, invocation::completeExceptionally);
+
+            // Inject both channels as new parameters
+            parameters = Stream.concat(parameters,
+                    Stream.of(successChannel, errorChannel));
+            int successIndex = parametersList.size();
+            int errorIndex = successIndex + 1;
+
+            /*
+             * Run the original expression. If it throws synchronously, run the
+             * error handler. Otherwise, pass the return value through
+             * Promise.resolve that resolves regular values immediately and
+             * waits for thenable values. Finally call either of the handlers
+             * once the promise completes.
+             */
+            //@formatter:off
+            expression =
+                  "try{"
+                +   "Promise.resolve((function(){"
+                +     expression
+                +   "})()).then($"+successIndex+",$"+errorIndex+")"
+                + "}catch(error){"
+                +   "$"+errorIndex+"(error)"
+                + "}";
+            //@formatter:on
+        }
 
         // [argument1, argument2, ..., script]
         return Stream
-                .concat(parametersStream,
-                        Stream.of(
-                                Json.create(executeJavaScript.getExpression())))
+                .concat(parameters.map(JsonCodec::encodeWithTypeInfo),
+                        Stream.of(Json.create(expression)))
                 .collect(JsonUtils.asArray());
     }
 

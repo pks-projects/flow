@@ -27,7 +27,7 @@ import com.vaadin.flow.component.Tag;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.internal.UIInternals;
 import com.vaadin.flow.component.internal.UIInternals.JavaScriptInvocation;
-import com.vaadin.flow.component.page.Page.ExecutionCanceler;
+import com.vaadin.flow.component.page.PendingJavaScriptResult;
 import com.vaadin.flow.dom.Element;
 import com.vaadin.flow.function.ValueProvider;
 
@@ -42,10 +42,10 @@ public class RendererUtilTest {
         }
 
         @Override
-        public ExecutionCanceler addJavaScriptInvocation(
+        public PendingJavaScriptResult addJavaScriptInvocation(
                 JavaScriptInvocation invocation) {
             invocations.add(invocation);
-            return () -> true;
+            return null;
         }
 
     }
